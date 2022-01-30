@@ -29,17 +29,27 @@ GPIO.setup(GREEN, GPIO.OUT, initial=False)
 SERIAL = i2c(port=1, address=0x3C)
 DEVICE = sh1106(SERIAL)
 FONT = ImageFont.truetype('coolvetica rg.otf', 26)
-IMG_PATH = str(Path(__file__).resolve().parent.joinpath('ventilator_64x64.png'))
-LOGO = Image.open(IMG_PATH).convert("RGBA")
-FFF = Image.new(LOGO.mode, LOGO.size, (255,) * 4)
-BACKGROUND = Image.new("RGBA", DEVICE.size, "white")
-POSN = ((DEVICE.width - LOGO.width) // 2, 0)
-IMG = Image.composite(LOGO, FFF, LOGO)
-BACKGROUND.paste(IMG, POSN)
+IMG_PATH = str(Path(__file__).resolve().parent.joinpath('ventilator_48x48.png'))
 
 subprocess.run("echo none > /sys/class/leds/led0/trigger", shell=True)
 subprocess.run("echo none > /sys/class/leds/led1/trigger", shell=True)
 os.system("sudo sh -c 'echo 0 > /sys/class/leds/led0/brightness'") # red
+
+def invert_image(img):
+    if image.mode == 'RGBA':
+        r,g,b,a = image.split()
+        rgb_image = Image.merge('RGB', (r,g,b))
+        inverted_image = ImageOps.invert(rgb_image)
+        r2,g2,b2 = inverted_image.split()
+        final_inverted_image = Image.merge('RGBA', (r2,g2,b2,a))
+    else:
+        final_inverted_image = ImageOps.invert(image)
+    return final_inverted_image
+
+def rotate_vent():
+    for angle in range(10):
+        rotated = BACKGROUND.rotate(angle*10)
+        DEVICE.display(rotated.convert(DEVICE.mode))
 
 def set_green():
     subprocess.run("sudo sh -c 'echo 1 > /sys/class/leds/led0/brightness'", shell=True) #green on
@@ -62,7 +72,7 @@ def set_red():
     GPIO.output(YELLOW, False)
     GPIO.output(RED, True)
     time.sleep(2)
-    DEVICE.display(BACKGROUND.convert(DEVICE.mode))
+    rotate_vent()
 
 def set_none():
     subprocess.run("sudo sh -c 'echo 0 > /sys/class/leds/led0/brightness'", shell=True) #green off
@@ -72,6 +82,15 @@ def set_none():
     GPIO.output(RED, False)
 
 try:
+    image = Image.open(IMG_PATH)
+    LOGO = invert_image(image)
+    EMPTY_BACKGROUND = Image.new("RGBA", DEVICE.size, "black")
+    POSN = ((DEVICE.width - image.width) // 2, (DEVICE.height - image.height) // 2)
+    FFF = Image.new(LOGO.mode, LOGO.size, (0,) * 4)
+    IMG = Image.composite(LOGO, FFF, LOGO)
+    BACKGROUND = EMPTY_BACKGROUND
+    BACKGROUND.paste(IMG, POSN)
+
     while True:
         X = mh_z19.read()
         VALUE = X["co2"]
