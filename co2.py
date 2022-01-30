@@ -5,12 +5,12 @@ Handles MH-Z19B sensor and indicates the current CO2 measurement:
 1) As a text on an attached I2C display, including interminnent ventilator animation on critical CO2
 2) Using built-in Raspberry Pi LEDs: green blinking, green, green+red, red
 """
-import subprocess
-import time
-import mh_z19
-import RPi.GPIO as GPIO
 import os
 from pathlib import Path
+import subprocess
+import time
+import RPi.GPIO as GPIO
+import mh_z19
 from luma.core.interface.serial import i2c
 from luma.core.render import canvas
 from luma.oled.device import sh1106
@@ -37,22 +37,25 @@ subprocess.run("echo none > /sys/class/leds/led1/trigger", shell=True)
 os.system("sudo sh -c 'echo 0 > /sys/class/leds/led0/brightness'") # red
 
 def invert_image(img):
-    if image.mode == 'RGBA':
-        r,g,b,a = image.split()
-        rgb_image = Image.merge('RGB', (r,g,b))
+    """Invert the colors in an image"""
+    if img.mode == 'RGBA':
+        r, g, b, a = img.split()
+        rgb_image = Image.merge('RGB', (r, g, b))
         inverted_image = ImageOps.invert(rgb_image)
-        r2,g2,b2 = inverted_image.split()
-        final_inverted_image = Image.merge('RGBA', (r2,g2,b2,a))
+        r2, g2, b2 = inverted_image.split()
+        final_inverted_image = Image.merge('RGBA', (r2, g2, b2, a))
     else:
-        final_inverted_image = ImageOps.invert(image)
+        final_inverted_image = ImageOps.invert(img)
     return final_inverted_image
 
 def rotate_vent():
-    for angle in range(10):
+    """Rotates the ventilator image"""
+    for angle in range(19):
         rotated = BACKGROUND.rotate(angle*10)
         DEVICE.display(rotated.convert(DEVICE.mode))
 
 def set_green():
+    """Sets the indication for good CO2 condition"""
     subprocess.run("sudo sh -c 'echo 1 > /sys/class/leds/led0/brightness'", shell=True) #green on
     subprocess.run("sudo sh -c 'echo 0 > /sys/class/leds/led1/brightness'", shell=True) #red off
     GPIO.output(GREEN, True)
@@ -60,6 +63,7 @@ def set_green():
     GPIO.output(RED, False)
 
 def set_yellow():
+    """Sets the indication for warning CO2 condition"""
     subprocess.run("sudo sh -c 'echo 1 > /sys/class/leds/led0/brightness'", shell=True) #green on
     subprocess.run("sudo sh -c 'echo 1 > /sys/class/leds/led1/brightness'", shell=True) #red on
     GPIO.output(GREEN, False)
@@ -67,6 +71,7 @@ def set_yellow():
     GPIO.output(RED, False)
 
 def set_red():
+    """Sets the indication for critical CO2 condition"""
     subprocess.run("sudo sh -c 'echo 0 > /sys/class/leds/led0/brightness'", shell=True) #green off
     subprocess.run("sudo sh -c 'echo 1 > /sys/class/leds/led1/brightness'", shell=True) #red on
     GPIO.output(GREEN, False)
@@ -76,6 +81,7 @@ def set_red():
     rotate_vent()
 
 def set_none():
+    """Turns the indication off"""
     subprocess.run("sudo sh -c 'echo 0 > /sys/class/leds/led0/brightness'", shell=True) #green off
     subprocess.run("sudo sh -c 'echo 0 > /sys/class/leds/led1/brightness'", shell=True) #red off
     GPIO.output(GREEN, False)
@@ -114,12 +120,8 @@ try:
         else:
             set_green()
         time.sleep(1)
-except Exception as error:
-    print("Error '{0}' occured. Arguments {1}.".format(error.message, error.args))
+except BaseException as error:
+    print(str(error))
     subprocess.run("echo mmc0 > /sys/class/leds/led0/trigger", shell=True)
     subprocess.run("echo input > /sys/class/leds/led1/trigger", shell=True)
     GPIO.cleanup()
-except KeyboardInterrupt:
-    GPIO.cleanup()
-    subprocess.run("echo mmc0 > /sys/class/leds/led0/trigger", shell=True)
-    subprocess.run("echo input > /sys/class/leds/led1/trigger", shell=True)
