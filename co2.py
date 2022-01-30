@@ -1,19 +1,20 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-
 """
-Blah
+Handles MH-Z19B sensor and indicates the current CO2 measurement:
+1) As a text on an attached I2C display, including interminnent ventilator animation on critical CO2
+2) Using built-in Raspberry Pi LEDs: green blinking, green, green+red, red
 """
 import subprocess
 import time
-import json
 import mh_z19
 import RPi.GPIO as GPIO
 import os
 from pathlib import Path
 from luma.core.interface.serial import i2c
 from luma.core.render import canvas
-from luma.oled.device import sh1106, ssd1306
-from PIL import ImageFont, ImageDraw, Image, ImageOps
+from luma.oled.device import sh1106
+from PIL import ImageFont, Image, ImageOps
 
 
 GPIO.setmode(GPIO.BCM)
